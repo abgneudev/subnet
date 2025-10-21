@@ -2,6 +2,10 @@
 
 SubNet is a platform for creating and managing AI agents powered by Subconscious.
 
+## 🌐 Live Demo
+
+[View Live Application](https://subnet-plum.vercel.app/)
+
 ## Features
 
 - Create new agents
