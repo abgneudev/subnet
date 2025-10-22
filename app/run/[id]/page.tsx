@@ -22,7 +22,7 @@ import {
   BarChart3, Clock, Users, Star, ExternalLink, Code2, Play, Wrench,
   Book, FileText, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown,
   AlertCircle, CheckCircle, Terminal, Hash, Globe, Activity,
-  BookOpen, Github, Send, MoreVertical, Flag
+  BookOpen, Github, Send, MoreVertical, Flag, Network, Braces
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Textarea } from '@/components/ui/textarea';
@@ -46,6 +46,7 @@ export default function RunAgentPage() {
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [userRating, setUserRating] = useState(0);
+  const [viewMode, setViewMode] = useState<'json' | 'flowchart'>('flowchart');
   const reasoningRef = useRef<HTMLPreElement>(null);
 
   const getToolLabel = (toolValue: string) => {
@@ -155,6 +156,76 @@ export default function RunAgentPage() {
       description: "Your comment has been added to the discussion" 
     });
     setCommentText('');
+  };
+
+  const renderFlowchart = (data: any) => {
+    if (!data || typeof data !== 'object') return null;
+
+    const renderNode = (key: string, value: any, level: number = 0) => {
+      const isExpandable = typeof value === 'object' && value !== null;
+      const isArray = Array.isArray(value);
+      
+      return (
+        <div key={key} className={cn("relative", level > 0 && "ml-8 mt-2")}>
+          {/* Connection line */}
+          {level > 0 && (
+            <div className="absolute left-[-24px] top-[20px] w-6 h-[2px] bg-border" />
+          )}
+          
+          {/* Node */}
+          <div className="relative">
+            {level > 0 && (
+              <div className="absolute left-[-24px] top-0 bottom-0 w-[2px] bg-border" />
+            )}
+            
+            <div className={cn(
+              "inline-flex items-start gap-2 p-3 rounded-lg border bg-card",
+              isExpandable && "bg-muted/30"
+            )}>
+              <div className="flex items-center gap-2 min-w-0">
+                {isExpandable ? (
+                  <Network className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                ) : (
+                  <div className="h-2 w-2 rounded-full bg-green-500 flex-shrink-0 mt-1" />
+                )}
+                
+                <div className="min-w-0">
+                  <span className="font-medium text-sm text-foreground break-words">
+                    {key}
+                  </span>
+                  {!isExpandable && (
+                    <span className="text-sm text-muted-foreground ml-2 break-words">
+                      {String(value)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Children */}
+            {isExpandable && (
+              <div className="mt-2 space-y-2">
+                {isArray ? (
+                  value.map((item: any, index: number) => 
+                    renderNode(`[${index}]`, item, level + 1)
+                  )
+                ) : (
+                  Object.entries(value).map(([k, v]) => 
+                    renderNode(k, v, level + 1)
+                  )
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div className="space-y-3">
+        {Object.entries(data).map(([key, value]) => renderNode(key, value))}
+      </div>
+    );
   };
 
   if (!agent) {
@@ -635,6 +706,89 @@ export default function RunAgentPage() {
                     <CardTitle>Test the Agent</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {result && (
+                      <div className="space-y-4">
+                        {/* Answer Section */}
+                        {result?.answer && (
+                          <div className="border rounded-lg p-4 bg-muted/30">
+                            <div className="flex items-center gap-2 mb-3">
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              <h3 className="text-sm font-semibold">Answer</h3>
+                            </div>
+                            <div className="bg-background rounded-lg p-4 border">
+                              <div className="prose prose-sm max-w-none dark:prose-invert">
+                                <ReactMarkdown>{result.answer}</ReactMarkdown>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Reasoning Section */}
+                        {result?.reasoning && (
+                          <div className="border rounded-lg p-4 bg-muted/30">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <Terminal className="h-4 w-4" />
+                                <h3 className="text-sm font-semibold">Reasoning</h3>
+                              </div>
+                              <div className="flex gap-1 border rounded-md p-1">
+                                <Button
+                                  variant={viewMode === 'flowchart' ? 'secondary' : 'ghost'}
+                                  size="sm"
+                                  onClick={() => setViewMode('flowchart')}
+                                  className="h-7 px-2"
+                                >
+                                  <Network className="h-3 w-3 mr-1" />
+                                  Flowchart
+                                </Button>
+                                <Button
+                                  variant={viewMode === 'json' ? 'secondary' : 'ghost'}
+                                  size="sm"
+                                  onClick={() => setViewMode('json')}
+                                  className="h-7 px-2"
+                                >
+                                  <Braces className="h-3 w-3 mr-1" />
+                                  JSON
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="bg-background rounded-lg p-4 border overflow-x-auto">
+                              {viewMode === 'flowchart' ? (
+                                renderFlowchart(result.reasoning)
+                              ) : (
+                                <pre className="text-sm whitespace-pre-wrap">
+                                  {typeof result.reasoning === 'string' 
+                                    ? result.reasoning 
+                                    : JSON.stringify(result.reasoning, null, 2)}
+                                </pre>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Fallback for string or other formats */}
+                        {!result?.answer && !result?.reasoning && (
+                          <div className="border rounded-lg p-4 bg-muted/30">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Terminal className="h-4 w-4" />
+                              <h3 className="text-sm font-semibold">Output</h3>
+                            </div>
+                            <div className="bg-background rounded-lg p-4 border">
+                              {typeof result === 'string' ? (
+                                <div className="prose prose-sm max-w-none dark:prose-invert">
+                                  <ReactMarkdown>{result}</ReactMarkdown>
+                                </div>
+                              ) : (
+                                <pre className="text-sm whitespace-pre-wrap">
+                                  {JSON.stringify(result, null, 2)}
+                                </pre>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Run controls and output would go here */}
                     <div className="flex gap-2">
                       <Button
@@ -660,28 +814,6 @@ export default function RunAgentPage() {
                         </Button>
                       )}
                     </div>
-
-                    {result && (
-                      <div className="space-y-4">
-                        <div className="border rounded-lg p-4 bg-muted/30">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Terminal className="h-4 w-4" />
-                            <h3 className="text-sm font-semibold">Output</h3>
-                          </div>
-                          <div className="bg-background rounded-lg p-4 border">
-                            {typeof result === 'string' ? (
-                              <div className="prose prose-sm max-w-none dark:prose-invert">
-                                <ReactMarkdown>{result}</ReactMarkdown>
-                              </div>
-                            ) : (
-                              <pre className="text-sm whitespace-pre-wrap">
-                                {JSON.stringify(result, null, 2)}
-                              </pre>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               </div>
