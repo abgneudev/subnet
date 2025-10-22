@@ -2,8 +2,8 @@
 
 import type React from 'react';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,10 +16,32 @@ import { Separator } from '@/components/ui/separator';
 
 export default function CreatePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [prompt, setPrompt] = useState('');
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
+
+  useEffect(() => {
+    const forkId = searchParams.get('fork');
+    if (forkId) {
+      async function fetchAgent() {
+        try {
+          const response = await fetch(`/api/agents/${forkId}`);
+          if (response.ok) {
+            const agent = await response.json();
+            setTitle(`${agent.title} (Fork)`);
+            setDescription(agent.description);
+            setPrompt(agent.prompt);
+            setSelectedTools(agent.tools);
+          }
+        } catch (error) {
+          console.error('Error fetching agent for fork:', error);
+        }
+      }
+      fetchAgent();
+    }
+  }, [searchParams]);
 
   const handleToolToggle = (tool: string) => {
     setSelectedTools((prev) =>
@@ -62,9 +84,13 @@ export default function CreatePage() {
       <Header />
       <main className="container mx-auto max-w-3xl px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-foreground mb-2 text-4xl font-bold">Create New Agent</h1>
+          <h1 className="text-foreground mb-2 text-4xl font-bold">
+            {searchParams.get('fork') ? 'Fork Agent' : 'Create New Agent'}
+          </h1>
           <p className="text-muted-foreground">
-            Configure your Subconscious agent with instructions and search tools
+            {searchParams.get('fork')
+              ? 'Modify the forked agent and create a new version'
+              : 'Configure your Subconscious agent with instructions and search tools'}
           </p>
         </div>
 
@@ -138,7 +164,7 @@ export default function CreatePage() {
                   type="submit"
                   className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1 cursor-pointer"
                 >
-                  Create Agent
+                  {searchParams.get('fork') ? 'Fork Agent' : 'Create Agent'}
                 </Button>
                 <Button
                   type="button"

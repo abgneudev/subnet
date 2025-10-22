@@ -10,11 +10,18 @@ export function Header() {
           <Image src="/logo.png" alt="SubNet" width={40} height={40} />
           <span className="text-foreground text-2xl font-bold">SubNet</span>
         </Link>
-        <Link href="/create">
-          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer">
-            Create Agent
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/">
+            <Button variant="outline" className="cursor-pointer">
+              Explore
+            </Button>
+          </Link>
+          <Link href="/create">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer">
+              Create Agent
+            </Button>
+          </Link>
+        </div>
       </div>
     </header>
   );

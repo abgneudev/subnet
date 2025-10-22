@@ -14,7 +14,7 @@ export async function GET() {
       title: agent.name,
       description: agent.description,
       prompt: agent.prompt,
-      tools: (agent.tools as string[]) || [],
+      tools: Array.isArray(agent.tools) ? (agent.tools as string[]) : [],
     }));
 
     return NextResponse.json(mappedAgents);
