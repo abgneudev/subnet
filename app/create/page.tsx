@@ -13,7 +13,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AVAILABLE_TOOLS, type Tool } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
-import { Info, Check, Plus, Send, Search, ArrowUpDown, Filter, CheckCircle2, ChevronDown, ChevronUp, ExternalLink, HelpCircle } from 'lucide-react';
+import { Info, Check, Plus, Send, Search, ArrowUpDown, Filter, CheckCircle2, ChevronDown, ChevronUp, ExternalLink, HelpCircle, Play, MessageSquare, Settings, FileText, BarChart3, Database, Shield } from 'lucide-react';
 import { PromptFeedbackPanel } from '@/components/prompt-feedback-panel';
 import { analyzePrompt, type FeedbackSuggestion } from '@/lib/prompt-feedback';
 import { Badge } from '@/components/ui/badge';
@@ -26,10 +26,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AgentWorkflowPreview } from '@/components/agent-workflow-preview';
 
 export default function CreatePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState('chat');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [prompt, setPrompt] = useState('');
@@ -141,11 +144,170 @@ export default function CreatePage() {
 
   return (
     <div className="bg-muted/30 min-h-screen">
-      <Header showTabs={true} activeTab="configuration" />
+      <Header showTabs={false} activeTab="configuration" />
       <main className="container mx-auto px-6 py-6">
-        <div className="flex gap-6 h-[calc(100vh-180px)]">
-          {/* Left Panel - Configuration */}
-          <div className="flex-1 overflow-auto">
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
+            <TabsList className="inline-flex h-10 items-center justify-start rounded-lg bg-muted p-1 text-muted-foreground">
+              <TabsTrigger 
+                value="chat" 
+                className="inline-flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Chats
+              </TabsTrigger>
+              <TabsTrigger 
+                value="configuration"
+                className="inline-flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground"
+              >
+                <Settings className="h-4 w-4" />
+                Configuration
+              </TabsTrigger>
+              <TabsTrigger 
+                value="guardrails"
+                className="inline-flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground"
+              >
+                <Shield className="h-4 w-4" />
+                Guardrails
+              </TabsTrigger>
+              <TabsTrigger 
+                value="datasets"
+                className="inline-flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground"
+              >
+                <Database className="h-4 w-4" />
+                Datasets
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
+          <Button
+            onClick={handleSubmit}
+            disabled={!title || !description || !prompt}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
+          >
+            {searchParams.get('fork') ? 'Deploy Fork' : 'Deploy Agent'}
+          </Button>
+        </div>
+
+        <div className="flex gap-6 h-[calc(100vh-240px)]">
+          {activeTab === 'chat' && (
+            <>
+              {/* Left Side - Chat Section */}
+              <div className="w-2/5 flex flex-col bg-background rounded-lg border">
+                {/* Chat Header */}
+                <div className="px-6 py-3 border-b">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold">Test Your Agent</h2>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Model:</span>
+                      <Badge variant="secondary" className="text-xs">{selectedModel}</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                  <div className="flex justify-start">
+                    <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg">🤖</span>
+                        <span className="text-xs font-medium">Assistant</span>
+                      </div>
+                      <p className="text-sm">
+                        Hello! I'm your agent assistant. I'm configured with the following capabilities:
+                      </p>
+                      {selectedTools.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {selectedTools.slice(0, 3).map((tool) => {
+                            const toolInfo = AVAILABLE_TOOLS.find(t => t.value === tool);
+                            return (
+                              <Badge key={tool} variant="outline" className="text-[10px]">
+                                {toolInfo?.logo} {toolInfo?.label}
+                              </Badge>
+                            );
+                          })}
+                          {selectedTools.length > 3 && (
+                            <Badge variant="outline" className="text-[10px]">
+                              +{selectedTools.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-xs mt-2 text-muted-foreground">
+                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {!prompt && (
+                    <div className="flex justify-center">
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 max-w-md">
+                        <p className="text-sm text-amber-800">
+                          ⚠️ Add instructions in the Configuration tab to define your agent's behavior.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Input Section */}
+                <div className="border-t p-4">
+                  <div className="flex gap-2">
+                    <Input
+                      value={chatMessage}
+                      onChange={(e) => setChatMessage(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && chatMessage.trim()) {
+                          // Handle send message
+                          setChatMessage('');
+                        }
+                      }}
+                      placeholder="Test your agent here..."
+                      className="flex-1"
+                      disabled={!prompt}
+                    />
+                    <Button
+                      onClick={() => {
+                        if (chatMessage.trim()) {
+                          // Handle send message
+                          setChatMessage('');
+                        }
+                      }}
+                      disabled={!chatMessage.trim() || !prompt}
+                      className="cursor-pointer"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Press Enter to send</span>
+                    <span>Temperature: {temperature.toFixed(2)} • Max iterations: {maxIterations}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side - Workflow Visualization */}
+              <div className="w-3/5 flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-semibold">Agent Workflow</h2>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="default" className="cursor-pointer">
+                      <Play className="w-3 h-3 mr-1" />
+                      Run
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex-1 rounded-lg overflow-hidden">
+                  <AgentWorkflowPreview />
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'configuration' && (
+            <>
+              {/* Left Panel - Configuration */}
+              <div className="flex-1 overflow-auto">
             <h1 className="text-foreground mb-6 text-2xl font-semibold">
               Agent configuration
             </h1>
@@ -537,7 +699,7 @@ export default function CreatePage() {
                   type="submit"
                   className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1 cursor-pointer"
                 >
-                  {searchParams.get('fork') ? 'Fork Agent' : 'Create Agent'}
+                  {searchParams.get('fork') ? 'Deploy Fork' : 'Deploy Agent'}
                 </Button>
                 <Button
                   type="button"
@@ -607,10 +769,30 @@ export default function CreatePage() {
                 </Button>
               </div>
               <div className="mt-2 text-xs text-muted-foreground">
-                gpt-4.1
+                {selectedModel}
               </div>
             </div>
           </div>
+            </>
+          )}
+
+          {activeTab === 'guardrails' && (
+            <div className="flex-1 flex items-center justify-center bg-background rounded-lg border">
+              <div className="text-center text-muted-foreground">
+                <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm">Guardrails configuration coming soon</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'datasets' && (
+            <div className="flex-1 flex items-center justify-center bg-background rounded-lg border">
+              <div className="text-center text-muted-foreground">
+                <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm">Datasets view coming soon</p>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
