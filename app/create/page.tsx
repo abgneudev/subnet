@@ -192,28 +192,53 @@ export default function CreatePage() {
         <div className="flex gap-6 h-[calc(100vh-240px)]">
           {activeTab === 'chat' && (
             <>
-              {/* Left Side - Chat Section */}
-              <div className="w-2/5 flex flex-col bg-background rounded-lg border">
+              {/* Left Side - Workflow Visualization */}
+              <div className="flex-1 flex flex-col overflow-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold">Agent Workflow</h2>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="default" className="cursor-pointer">
+                      <Play className="w-3 h-3 mr-1" />
+                      Run
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex-1 rounded-lg overflow-hidden">
+                  <AgentWorkflowPreview />
+                </div>
+              </div>
+
+              {/* Right Side - Chat Section */}
+              <div className="w-[400px] flex flex-col border-l pl-6">
                 {/* Chat Header */}
-                <div className="px-6 py-3 border-b">
+                <div className="mb-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-semibold">Test Your Agent</h2>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">Model:</span>
-                      <Badge variant="secondary" className="text-xs">{selectedModel}</Badge>
-                    </div>
+                    <h2 className="text-lg font-semibold">Test Your Agent</h2>
+                    <Button variant="ghost" size="icon">
+                      <span className="sr-only">Minimize</span>
+                      ✕
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-xs text-muted-foreground">Model:</span>
+                    <Badge variant="secondary" className="text-xs">{selectedModel}</Badge>
                   </div>
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                  <div className="flex justify-start">
-                    <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted">
+                <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm">🤖</span>
+                    </div>
+                    <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-lg">🤖</span>
-                        <span className="text-xs font-medium">Assistant</span>
+                        <span className="font-semibold text-sm">Assistant</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
-                      <p className="text-sm">
+                      <p className="text-sm text-muted-foreground">
                         Hello! I'm your agent assistant. I'm configured with the following capabilities:
                       </p>
                       {selectedTools.length > 0 && (
@@ -233,25 +258,20 @@ export default function CreatePage() {
                           )}
                         </div>
                       )}
-                      <p className="text-xs mt-2 text-muted-foreground">
-                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
                     </div>
                   </div>
 
                   {!prompt && (
-                    <div className="flex justify-center">
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 max-w-md">
-                        <p className="text-sm text-amber-800">
-                          ⚠️ Add instructions in the Configuration tab to define your agent's behavior.
-                        </p>
-                      </div>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                      <p className="text-sm text-amber-800">
+                        ⚠️ Add instructions in the Configuration tab to define your agent's behavior.
+                      </p>
                     </div>
                   )}
                 </div>
 
                 {/* Input Section */}
-                <div className="border-t p-4">
+                <div className="border-t pt-4">
                   <div className="flex gap-2">
                     <Input
                       value={chatMessage}
@@ -263,10 +283,11 @@ export default function CreatePage() {
                         }
                       }}
                       placeholder="Test your agent here..."
-                      className="flex-1"
+                      className="flex-1 bg-background"
                       disabled={!prompt}
                     />
                     <Button
+                      size="icon"
                       onClick={() => {
                         if (chatMessage.trim()) {
                           // Handle send message
@@ -279,26 +300,9 @@ export default function CreatePage() {
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Press Enter to send</span>
-                    <span>Temperature: {temperature.toFixed(2)} • Max iterations: {maxIterations}</span>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Temperature: {temperature.toFixed(2)} • Max iterations: {maxIterations}
                   </div>
-                </div>
-              </div>
-
-              {/* Right Side - Workflow Visualization */}
-              <div className="w-3/5 flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-semibold">Agent Workflow</h2>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="default" className="cursor-pointer">
-                      <Play className="w-3 h-3 mr-1" />
-                      Run
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex-1 rounded-lg overflow-hidden">
-                  <AgentWorkflowPreview />
                 </div>
               </div>
             </>
