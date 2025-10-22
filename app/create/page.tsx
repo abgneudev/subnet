@@ -650,7 +650,7 @@ export default function CreatePage() {
                   {/* Documentation Link */}
                   <div className="pt-2">
                     <a
-                      href="https://docs.subnet.ai/advanced-settings"
+                      href="https://docs.subconscious.dev/"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
