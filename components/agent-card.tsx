@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Star } from 'lucide-react';
 import { useState } from 'react';
 import { AVAILABLE_TOOLS } from '@/lib/types';
 
@@ -58,6 +58,19 @@ export function AgentCard({ agent, onDelete }: AgentCardProps) {
           <div className="min-w-0 flex-1">
             <CardTitle className="text-xl">{agent.title}</CardTitle>
             <CardDescription className="line-clamp-2">{agent.description}</CardDescription>
+            {(agent.rating !== undefined || agent.reviewCount !== undefined) && (
+              <div className="flex items-center gap-1 mt-2">
+                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                <span className="text-sm font-medium">
+                  {agent.rating?.toFixed(1) || '0.0'}
+                </span>
+                {agent.reviewCount !== undefined && (
+                  <span className="text-sm text-muted-foreground">
+                    ({agent.reviewCount.toLocaleString()})
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <Button
             variant="ghost"

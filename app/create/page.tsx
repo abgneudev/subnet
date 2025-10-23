@@ -13,7 +13,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AVAILABLE_TOOLS, type Tool } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
-import { Info, Check, Plus, Send, Search, ArrowUpDown, Filter, CheckCircle2, ChevronDown, ChevronUp, ExternalLink, HelpCircle, Play, MessageSquare, Settings, FileText, BarChart3, Database, Shield } from 'lucide-react';
+import { Info, Check, Plus, Send, Search, ArrowUpDown, Filter, CheckCircle2, ChevronDown, ChevronUp, ChevronRight, ExternalLink, HelpCircle, Play, MessageSquare, Settings, FileText, BarChart3, Database, Shield, XCircle, AlertCircle, Loader2, Terminal, Eye, Code2, Clock, Zap, X } from 'lucide-react';
 import { PromptFeedbackPanel } from '@/components/prompt-feedback-panel';
 import { analyzePrompt, type FeedbackSuggestion } from '@/lib/prompt-feedback';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,74 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AgentWorkflowPreview } from '@/components/agent-workflow-preview';
+
+// Mock execution data for debugging
+const MOCK_EXECUTIONS = [
+  { id: '47', status: 'success', duration: '2.8s', timestamp: '2 min ago', nodes: ['Start', 'Process request', 'Generate response'] },
+  { id: '46', status: 'failed', duration: '1.2s', timestamp: '5 min ago', nodes: ['Start', 'Process request'] },
+  { id: '45', status: 'success', duration: '3.1s', timestamp: '12 min ago', nodes: ['Start', 'Process request', 'Generate response'] },
+  { id: '44', status: 'success', duration: '2.5s', timestamp: '18 min ago', nodes: ['Start', 'Process request', 'Generate response'] },
+];
+
+const MOCK_LOGS = [
+  { timestamp: '12:34:56', level: 'info', message: 'Workflow execution started', node: 'Start' },
+  { timestamp: '12:34:57', level: 'info', message: 'Processing user input...', node: 'Process request' },
+  { timestamp: '12:34:57', level: 'debug', message: 'API Call to gpt-4o initiated', node: 'Process request' },
+  { timestamp: '12:34:58', level: 'warning', message: 'Rate limit warning (80% capacity)', node: 'Process request' },
+  { timestamp: '12:34:59', level: 'success', message: 'Node completed successfully (1.2s)', node: 'Process request' },
+  { timestamp: '12:35:00', level: 'info', message: 'Generating final response...', node: 'Generate response' },
+  { timestamp: '12:35:02', level: 'success', message: 'Response generated successfully', node: 'Generate response' },
+];
+
+const MOCK_NODE_DATA = {
+  'Process request': {
+    input: {
+      query: "How do I create a product brief?",
+      context: { user_id: "123", timestamp: "2025-10-23T12:34:56Z" }
+    },
+    output: {
+      processed: true,
+      tokens: 245,
+      intent: "product_documentation",
+      confidence: 0.87
+    },
+    performance: {
+      duration: '1.2s',
+      tokensIn: 245,
+      tokensOut: 189,
+      cost: '$0.0023',
+      retries: 0
+    },
+    llmDetails: {
+      model: 'gpt-4o',
+      temperature: 0.70,
+      maxTokens: 2048
+    }
+  },
+  'Generate response': {
+    input: {
+      processed_data: { intent: "product_documentation", confidence: 0.87 },
+      template: "product_brief"
+    },
+    output: {
+      response: "Here's a structured product brief template...",
+      format: "markdown",
+      length: 1240
+    },
+    performance: {
+      duration: '2.1s',
+      tokensIn: 189,
+      tokensOut: 456,
+      cost: '$0.0041',
+      retries: 0
+    },
+    llmDetails: {
+      model: 'gpt-4o',
+      temperature: 0.70,
+      maxTokens: 2048
+    }
+  }
+};
 
 export default function CreatePage() {
   const router = useRouter();
@@ -46,6 +114,14 @@ export default function CreatePage() {
   const [selectedModel, setSelectedModel] = useState('gpt-4o');
   const [temperature, setTemperature] = useState(0.7);
   const [maxIterations, setMaxIterations] = useState(10);
+
+  // Debugging state
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [executionPanelOpen, setExecutionPanelOpen] = useState(true);
+  const [debugActiveView, setDebugActiveView] = useState<'history' | 'console'>('history');
+  const [selectedExecution, setSelectedExecution] = useState<string | null>(null);
+  const [logFilter, setLogFilter] = useState<'all' | 'errors' | 'warnings'>('all');
+  const [isRunning, setIsRunning] = useState(false);
 
   // Analyze prompt for feedback
   const feedback = useMemo(() => {
@@ -142,6 +218,32 @@ export default function CreatePage() {
     }
   };
 
+  // Helper functions for debugging
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'success': return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      case 'failed': return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'running': return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
+      default: return <AlertCircle className="h-4 w-4 text-gray-400" />;
+    }
+  };
+
+  const getLevelColor = (level: string) => {
+    switch (level) {
+      case 'error': return 'text-red-600';
+      case 'warning': return 'text-amber-600';
+      case 'success': return 'text-green-600';
+      case 'debug': return 'text-blue-600';
+      default: return 'text-gray-600';
+    }
+  };
+
+  const filteredLogs = MOCK_LOGS.filter(log => {
+    if (logFilter === 'errors') return log.level === 'error';
+    if (logFilter === 'warnings') return log.level === 'warning' || log.level === 'error';
+    return true;
+  });
+
   return (
     <div className="bg-muted/30 min-h-screen">
       <Header showTabs={false} activeTab="configuration" />
@@ -189,123 +291,518 @@ export default function CreatePage() {
           </Button>
         </div>
 
-        <div className="flex gap-6 h-[calc(100vh-240px)]">
+        <div className="flex gap-6" style={{ minHeight: 'calc(100vh - 240px)' }}>
           {activeTab === 'chat' && (
-            <>
-              {/* Left Side - Workflow Visualization */}
-              <div className="flex-1 flex flex-col overflow-auto">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">Agent Workflow</h2>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="default" className="cursor-pointer">
+            <div className="flex-1 flex flex-col">
+              {/* Top Section - Workflow + Inspector + Chat */}
+              <div className="flex gap-6" style={{ height: 'calc(100vh - 240px)' }}>
+                {/* Left Side - Workflow Visualization */}
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-lg font-semibold">Agent Workflow</h2>
+                      <div className="flex items-center gap-2">
+                        <div className={`h-2 w-2 rounded-full ${isRunning ? 'bg-green-500 animate-pulse' : 'bg-muted'}`} />
+                        <span className="text-xs text-muted-foreground">{isRunning ? 'Running' : 'Idle'}</span>
+                      </div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="default" 
+                      className="cursor-pointer"
+                      onClick={() => setIsRunning(!isRunning)}
+                    >
                       <Play className="w-3 h-3 mr-1" />
                       Run
                     </Button>
                   </div>
-                </div>
-                <div className="flex-1 rounded-lg overflow-hidden">
-                  <AgentWorkflowPreview />
-                </div>
-              </div>
-
-              {/* Right Side - Chat Section */}
-              <div className="w-[400px] flex flex-col border-l pl-6">
-                {/* Chat Header */}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">Test Your Agent</h2>
-                    <Button variant="ghost" size="icon">
-                      <span className="sr-only">Minimize</span>
-                      ✕
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-xs text-muted-foreground">Model:</span>
-                    <Badge variant="secondary" className="text-xs">{selectedModel}</Badge>
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto mb-4 space-y-4">
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm">🤖</span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-sm">Assistant</span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Hello! I'm your agent assistant. I'm configured with the following capabilities:
-                      </p>
-                      {selectedTools.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {selectedTools.slice(0, 3).map((tool) => {
-                            const toolInfo = AVAILABLE_TOOLS.find(t => t.value === tool);
-                            return (
-                              <Badge key={tool} variant="outline" className="text-[10px]">
-                                {toolInfo?.logo} {toolInfo?.label}
-                              </Badge>
-                            );
-                          })}
-                          {selectedTools.length > 3 && (
-                            <Badge variant="outline" className="text-[10px]">
-                              +{selectedTools.length - 3} more
-                            </Badge>
-                          )}
+                  
+                  {/* Workflow Canvas */}
+                  <div className="flex-1 rounded-lg border bg-background overflow-hidden relative">
+                    <div className="absolute inset-0 p-6">
+                      {/* Simplified Workflow Visualization */}
+                      <div className="flex items-center gap-4 justify-center h-full">
+                        {/* Start Node */}
+                        <div 
+                          onClick={() => setSelectedNode('Start')}
+                          className={`flex flex-col items-center gap-2 cursor-pointer transition-all ${
+                            selectedNode === 'Start' ? 'ring-2 ring-primary ring-offset-2' : ''
+                          }`}
+                        >
+                          <div className="relative">
+                            <div className="w-24 h-24 rounded-2xl bg-background border-2 border-green-500 shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow">
+                              <Play className="h-8 w-8 text-green-600" />
+                            </div>
+                            <div className="absolute -top-1 -right-1">
+                              <CheckCircle2 className="h-5 w-5 text-green-500 bg-background rounded-full" />
+                            </div>
+                            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                              50ms
+                            </div>
+                          </div>
+                          <span className="text-sm font-medium">Start</span>
                         </div>
+
+                        {/* Arrow */}
+                        <div className="flex items-center gap-2">
+                          <div className="w-12 h-0.5 bg-green-500"></div>
+                          <div className="w-0 h-0 border-t-4 border-t-transparent border-b-4 border-b-transparent border-l-8 border-l-green-500"></div>
+                        </div>
+
+                        {/* Process Request Node */}
+                        <div 
+                          onClick={() => setSelectedNode('Process request')}
+                          className={`flex flex-col items-center gap-2 cursor-pointer transition-all ${
+                            selectedNode === 'Process request' ? 'ring-2 ring-primary ring-offset-2' : ''
+                          }`}
+                        >
+                          <div className="relative">
+                            <div className="w-24 h-24 rounded-2xl bg-background border-2 border-blue-500 shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow">
+                              <Zap className="h-8 w-8 text-blue-600" />
+                            </div>
+                            {isRunning ? (
+                              <div className="absolute -top-1 -right-1">
+                                <Loader2 className="h-5 w-5 text-blue-500 bg-background rounded-full animate-spin" />
+                              </div>
+                            ) : (
+                              <div className="absolute -top-1 -right-1">
+                                <CheckCircle2 className="h-5 w-5 text-green-500 bg-background rounded-full" />
+                              </div>
+                            )}
+                            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                              1.2s
+                            </div>
+                          </div>
+                          <span className="text-sm font-medium">Process request</span>
+                          <span className="text-[10px] text-muted-foreground">Agent</span>
+                        </div>
+
+                        {/* Arrow */}
+                        <div className="flex items-center gap-2">
+                          <div className={`w-12 h-0.5 ${isRunning ? 'bg-muted' : 'bg-blue-500'}`}></div>
+                          <div className={`w-0 h-0 border-t-4 border-t-transparent border-b-4 border-b-transparent border-l-8 ${
+                            isRunning ? 'border-l-muted' : 'border-l-blue-500'
+                          }`}></div>
+                        </div>
+
+                        {/* Generate Response Node */}
+                        <div 
+                          onClick={() => setSelectedNode('Generate response')}
+                          className={`flex flex-col items-center gap-2 cursor-pointer transition-all ${
+                            selectedNode === 'Generate response' ? 'ring-2 ring-primary ring-offset-2' : ''
+                          }`}
+                        >
+                          <div className="relative">
+                            <div className={`w-24 h-24 rounded-2xl bg-background border-2 ${
+                              isRunning ? 'border-muted' : 'border-green-500'
+                            } shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow`}>
+                              <MessageSquare className={`h-8 w-8 ${isRunning ? 'text-muted-foreground' : 'text-green-600'}`} />
+                            </div>
+                            {!isRunning && (
+                              <div className="absolute -top-1 -right-1">
+                                <CheckCircle2 className="h-5 w-5 text-green-500 bg-background rounded-full" />
+                              </div>
+                            )}
+                            <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                              isRunning ? 'bg-muted text-muted-foreground' : 'bg-green-100 text-green-700'
+                            }`}>
+                              {isRunning ? '-' : '2.1s'}
+                            </div>
+                          </div>
+                          <span className="text-sm font-medium">Generate response</span>
+                          <span className="text-[10px] text-muted-foreground">Agent</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Node Inspector Panel - Slides in when node is selected */}
+                {selectedNode && (
+                  <div className="w-96 flex flex-col border rounded-lg bg-background shadow-lg animate-in slide-in-from-right duration-200">
+                    <div className="px-4 py-3 border-b flex items-center justify-between bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="font-semibold text-sm">Node Inspector</h3>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setSelectedNode(null)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="flex-1 overflow-auto p-4 space-y-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Zap className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-sm">{selectedNode}</h4>
+                            <p className="text-xs text-muted-foreground">Agent Node</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {MOCK_NODE_DATA[selectedNode as keyof typeof MOCK_NODE_DATA] && (
+                        <>
+                          {/* Input Section */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <div className="h-4 w-1 bg-blue-500 rounded-full"></div>
+                              <span className="text-xs font-semibold">Input</span>
+                            </div>
+                            <div className="bg-muted/50 rounded-lg p-3 border">
+                              <pre className="text-xs font-mono overflow-x-auto">
+                                {JSON.stringify(MOCK_NODE_DATA[selectedNode as keyof typeof MOCK_NODE_DATA].input, null, 2)}
+                              </pre>
+                            </div>
+                          </div>
+
+                          {/* Output Section */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <div className="h-4 w-1 bg-green-500 rounded-full"></div>
+                              <span className="text-xs font-semibold">Output</span>
+                            </div>
+                            <div className="bg-muted/50 rounded-lg p-3 border">
+                              <pre className="text-xs font-mono overflow-x-auto">
+                                {JSON.stringify(MOCK_NODE_DATA[selectedNode as keyof typeof MOCK_NODE_DATA].output, null, 2)}
+                              </pre>
+                            </div>
+                          </div>
+
+                          {/* Performance Metrics */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-xs font-semibold">Performance</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="bg-muted/50 rounded-lg p-2 border">
+                                <div className="text-[10px] text-muted-foreground mb-1">Duration</div>
+                                <div className="text-sm font-semibold">
+                                  {MOCK_NODE_DATA[selectedNode as keyof typeof MOCK_NODE_DATA].performance.duration}
+                                </div>
+                              </div>
+                              <div className="bg-muted/50 rounded-lg p-2 border">
+                                <div className="text-[10px] text-muted-foreground mb-1">Cost</div>
+                                <div className="text-sm font-semibold">
+                                  {MOCK_NODE_DATA[selectedNode as keyof typeof MOCK_NODE_DATA].performance.cost}
+                                </div>
+                              </div>
+                              <div className="bg-muted/50 rounded-lg p-2 border">
+                                <div className="text-[10px] text-muted-foreground mb-1">Tokens In</div>
+                                <div className="text-sm font-semibold">
+                                  {MOCK_NODE_DATA[selectedNode as keyof typeof MOCK_NODE_DATA].performance.tokensIn}
+                                </div>
+                              </div>
+                              <div className="bg-muted/50 rounded-lg p-2 border">
+                                <div className="text-[10px] text-muted-foreground mb-1">Tokens Out</div>
+                                <div className="text-sm font-semibold">
+                                  {MOCK_NODE_DATA[selectedNode as keyof typeof MOCK_NODE_DATA].performance.tokensOut}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* LLM Details */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Code2 className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-xs font-semibold">LLM Details</span>
+                            </div>
+                            <div className="bg-muted/50 rounded-lg p-3 border space-y-2">
+                              <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground">Model</span>
+                                <span className="font-medium">{MOCK_NODE_DATA[selectedNode as keyof typeof MOCK_NODE_DATA].llmDetails.model}</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground">Temperature</span>
+                                <span className="font-medium">{MOCK_NODE_DATA[selectedNode as keyof typeof MOCK_NODE_DATA].llmDetails.temperature}</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground">Max Tokens</span>
+                                <span className="font-medium">{MOCK_NODE_DATA[selectedNode as keyof typeof MOCK_NODE_DATA].llmDetails.maxTokens}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Logs for this node */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-xs font-semibold">Logs</span>
+                            </div>
+                            <div className="space-y-1">
+                              {MOCK_LOGS.filter(log => log.node === selectedNode).map((log, idx) => (
+                                <div key={idx} className="text-xs bg-muted/50 rounded p-2 border">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-muted-foreground font-mono text-[10px]">{log.timestamp}</span>
+                                    <span className={`font-medium text-[10px] ${getLevelColor(log.level)}`}>
+                                      {log.level.toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <div className="text-foreground">{log.message}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
                       )}
                     </div>
                   </div>
+                )}
 
-                  {!prompt && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-                      <p className="text-sm text-amber-800">
-                        ⚠️ Add instructions in the Configuration tab to define your agent's behavior.
-                      </p>
+                {/* Right Side - Chat Section */}
+                <div className={`flex flex-col border-l pl-6 ${selectedNode ? 'w-[320px]' : 'w-[400px]'} transition-all`}>
+                  {/* Chat Header */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-semibold">Test Your Agent</h2>
+                      <Button variant="ghost" size="icon">
+                        <span className="sr-only">Minimize</span>
+                        ✕
+                      </Button>
                     </div>
-                  )}
-                </div>
-
-                {/* Input Section */}
-                <div className="border-t pt-4">
-                  <div className="flex gap-2">
-                    <Input
-                      value={chatMessage}
-                      onChange={(e) => setChatMessage(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter' && chatMessage.trim()) {
-                          // Handle send message
-                          setChatMessage('');
-                        }
-                      }}
-                      placeholder="Test your agent here..."
-                      className="flex-1 bg-background"
-                      disabled={!prompt}
-                    />
-                    <Button
-                      size="icon"
-                      onClick={() => {
-                        if (chatMessage.trim()) {
-                          // Handle send message
-                          setChatMessage('');
-                        }
-                      }}
-                      disabled={!chatMessage.trim() || !prompt}
-                      className="cursor-pointer"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs text-muted-foreground">Model:</span>
+                      <Badge variant="secondary" className="text-xs">{selectedModel}</Badge>
+                    </div>
                   </div>
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    Temperature: {temperature.toFixed(2)} • Max iterations: {maxIterations}
+
+                  {/* Messages */}
+                  <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+                    <div className="flex gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm">🤖</span>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-sm">Assistant</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Hello! I'm your agent assistant. I'm configured with the following capabilities:
+                        </p>
+                        {selectedTools.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {selectedTools.slice(0, 3).map((tool) => {
+                              const toolInfo = AVAILABLE_TOOLS.find(t => t.value === tool);
+                              return (
+                                <Badge key={tool} variant="outline" className="text-[10px]">
+                                  {toolInfo?.logo} {toolInfo?.label}
+                                </Badge>
+                              );
+                            })}
+                            {selectedTools.length > 3 && (
+                              <Badge variant="outline" className="text-[10px]">
+                                +{selectedTools.length - 3} more
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {!prompt && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                        <p className="text-sm text-amber-800">
+                          ⚠️ Add instructions in the Configuration tab to define your agent's behavior.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Input Section */}
+                  <div className="border-t pt-4">
+                    <div className="flex gap-2">
+                      <Input
+                        value={chatMessage}
+                        onChange={(e) => setChatMessage(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && chatMessage.trim()) {
+                            // Handle send message
+                            setChatMessage('');
+                          }
+                        }}
+                        placeholder="Test your agent here..."
+                        className="flex-1 bg-background"
+                        disabled={!prompt}
+                      />
+                      <Button
+                        size="icon"
+                        onClick={() => {
+                          if (chatMessage.trim()) {
+                            // Handle send message
+                            setChatMessage('');
+                          }
+                        }}
+                        disabled={!chatMessage.trim() || !prompt}
+                        className="cursor-pointer"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Temperature: {temperature.toFixed(2)} • Max iterations: {maxIterations}
+                    </div>
                   </div>
                 </div>
               </div>
-            </>
+
+              {/* Bottom Execution Panel - Below workflow */}
+              <div className={`bg-background border-t rounded-lg transition-all mt-4 ${executionPanelOpen ? 'h-64' : 'h-12'}`}>
+                <div className="h-full flex flex-col">
+                  {/* Panel Header */}
+                  <div className="px-4 py-2 border-b flex items-center justify-between bg-muted/30">
+                    <div className="flex items-center gap-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setExecutionPanelOpen(!executionPanelOpen)}
+                        className="flex items-center gap-2 h-8 px-2"
+                      >
+                        {executionPanelOpen ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronUp className="h-4 w-4" />
+                        )}
+                        <span className="text-sm font-medium">Debug Panel</span>
+                      </Button>
+                      
+                      {executionPanelOpen && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant={debugActiveView === 'history' ? 'secondary' : 'ghost'}
+                            size="sm"
+                            onClick={() => setDebugActiveView('history')}
+                            className="h-7 px-3 text-xs"
+                          >
+                            <Clock className="h-3 w-3 mr-1.5" />
+                            Execution History
+                          </Button>
+                          <Button
+                            variant={debugActiveView === 'console' ? 'secondary' : 'ghost'}
+                            size="sm"
+                            onClick={() => setDebugActiveView('console')}
+                            className="h-7 px-3 text-xs"
+                          >
+                            <Terminal className="h-3 w-3 mr-1.5" />
+                            Console
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {executionPanelOpen && debugActiveView === 'console' && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Filter:</span>
+                        <Button
+                          variant={logFilter === 'all' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          onClick={() => setLogFilter('all')}
+                          className="h-6 px-2 text-xs"
+                        >
+                          All
+                        </Button>
+                        <Button
+                          variant={logFilter === 'warnings' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          onClick={() => setLogFilter('warnings')}
+                          className="h-6 px-2 text-xs"
+                        >
+                          Warnings
+                        </Button>
+                        <Button
+                          variant={logFilter === 'errors' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          onClick={() => setLogFilter('errors')}
+                          className="h-6 px-2 text-xs"
+                        >
+                          Errors
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Panel Content */}
+                  {executionPanelOpen && (
+                    <div className="flex-1 overflow-auto p-4">
+                      {debugActiveView === 'history' ? (
+                        <div className="space-y-2">
+                          {MOCK_EXECUTIONS.map((exec) => (
+                            <div
+                              key={exec.id}
+                              onClick={() => setSelectedExecution(exec.id === selectedExecution ? null : exec.id)}
+                              className={`border rounded-lg p-3 hover:bg-muted/50 cursor-pointer transition-colors ${
+                                selectedExecution === exec.id ? 'ring-2 ring-primary bg-primary/5' : ''
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  {getStatusIcon(exec.status)}
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium">Execution #{exec.id}</span>
+                                      <Badge 
+                                        variant={exec.status === 'success' ? 'default' : exec.status === 'failed' ? 'destructive' : 'secondary'}
+                                        className="text-[10px]"
+                                      >
+                                        {exec.status}
+                                      </Badge>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mt-0.5">
+                                      {exec.timestamp} • {exec.duration}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${selectedExecution === exec.id ? 'rotate-90' : ''}`} />
+                                </div>
+                              </div>
+                              
+                              {selectedExecution === exec.id && (
+                                <div className="mt-3 pt-3 border-t space-y-2">
+                                  <div className="text-xs font-medium">Execution Timeline:</div>
+                                  <div className="space-y-1">
+                                    {exec.nodes.map((node, idx) => (
+                                      <div key={idx} className="flex items-center gap-2 text-xs">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                                        <span className="text-muted-foreground">{node}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="font-mono text-xs space-y-1">
+                          {filteredLogs.map((log, idx) => (
+                            <div key={idx} className="flex items-start gap-3 py-1 hover:bg-muted/50 px-2 rounded">
+                              <span className="text-muted-foreground flex-shrink-0">{log.timestamp}</span>
+                              <span className={`font-semibold flex-shrink-0 ${getLevelColor(log.level)}`}>
+                                {log.level.toUpperCase().padEnd(7)}
+                              </span>
+                              <span className="flex-1">{log.message}</span>
+                              <span className="text-muted-foreground text-[10px] flex-shrink-0">({log.node})</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
 
           {activeTab === 'configuration' && (
@@ -718,8 +1215,8 @@ export default function CreatePage() {
           </div>
 
           {/* Right Panel - Configuration Assistant */}
-          <div className="w-[400px] flex flex-col border-l pl-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="w-[400px] flex flex-col border-l pl-6 sticky top-0 h-screen">
+            <div className="flex items-center justify-between mb-4 pt-6">
               <h2 className="text-lg font-semibold">Configuration Assistant</h2>
               <Button variant="ghost" size="icon">
                 <span className="sr-only">Close</span>
@@ -745,8 +1242,8 @@ export default function CreatePage() {
               </div>
             </div>
 
-            {/* Chat Input */}
-            <div className="border-t pt-4">
+            {/* Chat Input - Sticky at bottom */}
+            <div className="border-t pt-4 pb-6 bg-background">
               <div className="flex gap-2">
                 <Input
                   value={chatMessage}

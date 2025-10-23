@@ -566,6 +566,224 @@ export default function RunAgentPage() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Spec Details */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Cpu className="h-5 w-5" />
+                      Agent Specifications
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">MODEL</p>
+                        <p className="text-sm font-semibold">GPT-4o</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">TEMPERATURE</p>
+                        <p className="text-sm font-semibold">0.7</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">MAX TOKENS</p>
+                        <p className="text-sm font-semibold">2048</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">TIMEOUT</p>
+                        <p className="text-sm font-semibold">30s</p>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Tools & Capabilities</h4>
+                      <div className="flex flex-wrap gap-1">
+                        {agent.tools.slice(0, 4).map((tool) => (
+                          <Badge key={tool} variant="secondary">{getToolLabel(tool)}</Badge>
+                        ))}
+                        {agent.tools.length > 4 && (
+                          <Badge variant="outline">+{agent.tools.length - 4} more</Badge>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Agent Behavior</h4>
+                      <ul className="text-sm space-y-1 text-muted-foreground">
+                        <li className="flex items-center gap-2">
+                          <Zap className="h-3 w-3 text-blue-500" />
+                          Agentic reasoning enabled
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Network className="h-3 w-3 text-purple-500" />
+                          Multi-step task execution
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Shield className="h-3 w-3 text-green-500" />
+                          Context-aware responses
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Clock className="h-3 w-3 text-orange-500" />
+                          Real-time data processing
+                        </li>
+                      </ul>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Performance</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Avg Response Time</span>
+                          <span className="font-medium">{agentStats.avgResponseTime}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Success Rate</span>
+                          <span className="font-medium text-green-600">{agentStats.successRate}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Total Executions</span>
+                          <span className="font-medium">{agentStats.runs.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Privacy Statement */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <Shield className="h-5 w-5" />
+                        Privacy
+                      </CardTitle>
+                      <Button variant="outline" size="sm">
+                        <FileText className="h-3 w-3 mr-2" />
+                        View Policy
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {agent.title} has disclosed the following information regarding the collection and usage of your data. More detailed information can be found in the developer's privacy policy.
+                      </p>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium">Data Usage</p>
+                            <p className="text-xs text-muted-foreground">
+                              This agent processes public news data only and does not store personal information
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-start gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium">Not Sold to Third Parties</p>
+                            <p className="text-xs text-muted-foreground">
+                              No data is being sold to third parties, outside of approved use cases
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-start gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium">No Personal Data Collection</p>
+                            <p className="text-xs text-muted-foreground">
+                              Not being used or transferred for purposes unrelated to the agent's core functionality
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-start gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium">Creditworthiness Protection</p>
+                            <p className="text-xs text-muted-foreground">
+                              Not being used or transferred to determine creditworthiness or for lending purposes
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Support Statement */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <MessageSquare className="h-5 w-5" />
+                        Support
+                      </CardTitle>
+                      <Button variant="default" size="sm">
+                        <MessageSquare className="h-3 w-3 mr-2" />
+                        Contact
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Need help with this agent? Get support directly from the developer.
+                      </p>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Globe className="h-4 w-4 text-muted-foreground" />
+                          <a href="#" className="text-blue-600 hover:underline">
+                            Visit Support Website
+                          </a>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-sm">
+                          <Send className="h-4 w-4 text-muted-foreground" />
+                          <a href="mailto:support@example.com" className="text-blue-600 hover:underline">
+                            support@example.com
+                          </a>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-sm">
+                          <BookOpen className="h-4 w-4 text-muted-foreground" />
+                          <a href="#" className="text-blue-600 hover:underline">
+                            Documentation & FAQs
+                          </a>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-sm">
+                          <Github className="h-4 w-4 text-muted-foreground" />
+                          <a href="#" className="text-blue-600 hover:underline">
+                            Report an Issue
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-xs font-medium mb-1">Response Time</p>
+                          <p className="text-xs text-muted-foreground">
+                            The developer typically responds within 24-48 hours
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Right Column - Metadata */}
@@ -955,10 +1173,7 @@ export default function RunAgentPage() {
                             </Badge>
                           </TabsTrigger>
                           <TabsTrigger value="discussions">
-                            Discussions
-                            <Badge variant="secondary" className="ml-1 h-5 px-1">
-                              42
-                            </Badge>
+                            Community
                           </TabsTrigger>
                         </TabsList>
                         

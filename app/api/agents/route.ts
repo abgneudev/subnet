@@ -15,6 +15,8 @@ export async function GET() {
       description: agent.description,
       prompt: agent.prompt,
       tools: Array.isArray(agent.tools) ? (agent.tools as string[]) : [],
+      rating: agent.rating ?? undefined,
+      reviewCount: agent.reviewCount ?? undefined,
     }));
 
     return NextResponse.json(mappedAgents);
@@ -51,6 +53,8 @@ export async function POST(request: NextRequest) {
       description: newAgent.description,
       prompt: newAgent.prompt,
       tools: (newAgent.tools as string[]) || [],
+      rating: newAgent.rating ?? undefined,
+      reviewCount: newAgent.reviewCount ?? undefined,
     };
 
     return NextResponse.json(mappedAgent, { status: 201 });

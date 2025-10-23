@@ -15,12 +15,15 @@ import {
 } from 'lucide-react';
 
 const CATEGORIES = [
-  { value: 'all', label: 'All Agents' },
-  { value: 'research', label: 'Research' },
-  { value: 'content', label: 'Content' },
-  { value: 'analysis', label: 'Analysis' },
-  { value: 'automation', label: 'Automation' },
-  { value: 'data', label: 'Data' },
+  { value: 'all', label: 'For You', icon: '⭐' },
+  { value: 'popular', label: 'Most Popular', icon: '🔥' },
+  { value: 'research', label: 'Research', icon: '🔍' },
+  { value: 'content', label: 'Content Creation', icon: '✍️' },
+  { value: 'analysis', label: 'Data Analysis', icon: '📊' },
+  { value: 'automation', label: 'Automation', icon: '⚙️' },
+  { value: 'support', label: 'Customer Support', icon: '💬' },
+  { value: 'coding', label: 'Coding Assistant', icon: '💻' },
+  { value: 'marketing', label: 'Marketing', icon: '📢' },
 ];
 
 const SORT_OPTIONS = [
@@ -61,6 +64,42 @@ export default function DiscoverPage() {
   // Use useMemo for better performance and to ensure proper filtering/sorting
   const filteredAgents = useMemo(() => {
     let filtered = [...agents];
+
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(agent => {
+        const title = agent.title.toLowerCase();
+        const desc = agent.description.toLowerCase();
+        
+        switch (selectedCategory) {
+          case 'research':
+            return title.includes('research') || desc.includes('research') || 
+                   agent.tools.some(t => t.includes('search') || t.includes('exa'));
+          case 'content':
+            return title.includes('content') || title.includes('writer') || title.includes('blog') ||
+                   desc.includes('content') || desc.includes('writing');
+          case 'analysis':
+            return title.includes('analysis') || title.includes('data') || 
+                   desc.includes('analysis') || desc.includes('analytics');
+          case 'automation':
+            return title.includes('automation') || title.includes('workflow') ||
+                   desc.includes('automat');
+          case 'support':
+            return title.includes('support') || title.includes('customer') || title.includes('help') ||
+                   desc.includes('support') || desc.includes('customer');
+          case 'coding':
+            return title.includes('code') || title.includes('dev') || title.includes('programming') ||
+                   desc.includes('code') || desc.includes('programming');
+          case 'marketing':
+            return title.includes('market') || title.includes('seo') || title.includes('social') ||
+                   desc.includes('market') || desc.includes('campaign');
+          case 'popular':
+            return agent.tools.length > 2; // Agents with more tools are "popular"
+          default:
+            return true;
+        }
+      });
+    }
 
     // Filter by search query
     if (searchQuery.trim()) {
@@ -109,7 +148,7 @@ export default function DiscoverPage() {
     });
 
     return filtered;
-  }, [searchQuery, selectedTools, sortBy, agents]);
+  }, [searchQuery, selectedTools, sortBy, selectedCategory, agents]);
 
   const toggleTool = (tool: string) => {
     setSelectedTools(prev =>
@@ -150,41 +189,53 @@ export default function DiscoverPage() {
       <Header />
       
       {/* Filter Bar */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="container mx-auto px-0">
-          <div className="flex items-center h-12">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center gap-4 h-14">
             {/* Search */}
-            <div className="flex items-center px-4 h-full border-r border-gray-200">
-              <Search className="w-4 h-4 text-gray-500 mr-2" />
-              <input
-                type="text"
-                placeholder="Search agents..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-transparent text-gray-800 placeholder-gray-400 text-sm outline-none w-48 focus:w-64 transition-all duration-300"
-              />
+            <div className="flex items-center flex-1 max-w-md">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search agents by name, tools, or capability..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Tools Dropdown */}
-            <div className="relative h-full">
+            <div className="relative">
               <button
                 data-dropdown-trigger="tools"
                 onClick={(e) => {
                   e.stopPropagation();
                   setDropdownOpen(dropdownOpen === 'tools' ? null : 'tools');
                 }}
-                className={`flex items-center px-4 h-full text-gray-700 hover:text-gray-900 hover:bg-gray-100 text-sm font-medium transition-colors ${
-                  selectedTools.length > 0 ? 'text-blue-600' : ''
+                className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedTools.length > 0 
+                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 <SlidersHorizontal className="w-4 h-4 mr-2" />
                 Tools
                 {selectedTools.length > 0 && (
-                  <span className="ml-2 px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded-full">
+                  <span className="ml-2 px-1.5 py-0.5 text-xs bg-white/20 rounded-full">
                     {selectedTools.length}
                   </span>
                 )}
-                <ChevronDown className={`w-3 h-3 ml-2 text-gray-400 transition-transform ${
+                <ChevronDown className={`w-3 h-3 ml-2 transition-transform ${
                   dropdownOpen === 'tools' ? 'rotate-180' : ''
                 }`} />
               </button>
@@ -230,18 +281,18 @@ export default function DiscoverPage() {
             </div>
 
             {/* Sort Dropdown */}
-            <div className="relative h-full">
+            <div className="relative">
               <button
                 data-dropdown-trigger="sort"
                 onClick={(e) => {
                   e.stopPropagation();
                   setDropdownOpen(dropdownOpen === 'sort' ? null : 'sort');
                 }}
-                className="flex items-center px-4 h-full text-gray-700 hover:text-gray-900 hover:bg-gray-100 text-sm font-medium transition-colors"
+                className="flex items-center px-4 py-2 bg-gray-100 rounded-lg text-gray-700 hover:bg-gray-200 text-sm font-medium transition-colors"
               >
                 <ArrowUpDown className="w-4 h-4 mr-2" />
                 {SORT_OPTIONS.find(opt => opt.value === sortBy)?.label || 'Sort'}
-                <ChevronDown className={`w-3 h-3 ml-2 text-gray-400 transition-transform ${
+                <ChevronDown className={`w-3 h-3 ml-2 transition-transform ${
                   dropdownOpen === 'sort' ? 'rotate-180' : ''
                 }`} />
               </button>
@@ -274,23 +325,34 @@ export default function DiscoverPage() {
 
             {/* Clear Filters */}
             {activeFilterCount > 0 && (
-              <>
-                <button
-                  onClick={clearFilters}
-                  className="ml-auto px-4 text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors flex items-center"
-                >
-                  <X className="w-3 h-3 mr-1" />
-                  Clear all
-                </button>
-
-                {/* Active Filter Count */}
-                <div className="px-4 border-l border-gray-200">
-                  <span className="text-blue-600 text-sm font-medium">
-                    {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} active
-                  </span>
-                </div>
-              </>
+              <button
+                onClick={clearFilters}
+                className="px-3 py-2 text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors flex items-center"
+              >
+                <X className="w-3 h-3 mr-1" />
+                Clear
+              </button>
             )}
+          </div>
+        </div>
+
+        {/* Category Chips */}
+        <div className="container mx-auto px-4 pb-3">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+            {CATEGORIES.map((category) => (
+              <button
+                key={category.value}
+                onClick={() => setSelectedCategory(category.value)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  selectedCategory === category.value
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <span>{category.icon}</span>
+                <span>{category.label}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>

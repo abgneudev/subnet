@@ -21,6 +21,8 @@ Focus on stories that are surprising, novel, or not widely reported. Avoid the m
 
 Return a list of the top 2 most unexpected MIT news stories from the past week, with links and short explanations.`,
     tools: ['parallel_search'],
+    rating: 4.7,
+    reviewCount: 342,
   },
   {
     name: 'Positive News Haiku Writer',
@@ -28,6 +30,8 @@ Return a list of the top 2 most unexpected MIT news stories from the past week, 
     prompt:
       'You are a haiku writer. Use your search tool to find a piece of positive news from today, then write a simple haiku about it.',
     tools: ['parallel_search'],
+    rating: 4.9,
+    reviewCount: 1247,
   },
   {
     name: 'Hot AI News Analyzer',
@@ -44,6 +48,8 @@ Return:
 - A few key links to read more
 - A section of "Similar Pages" found using exa_find_similar, with links and short descriptions.`,
     tools: ['exa_search', 'exa_crawl', 'exa_find_similar'],
+    rating: 4.8,
+    reviewCount: 856,
   },
 ];
 

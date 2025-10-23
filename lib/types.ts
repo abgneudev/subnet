@@ -4,6 +4,8 @@ export interface Agent {
   description: string;
   prompt: string;
   tools: string[];
+  rating?: number; // Average rating out of 5
+  reviewCount?: number; // Number of reviews
 }
 
 export interface Tool {
